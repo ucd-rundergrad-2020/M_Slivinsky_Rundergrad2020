@@ -88,7 +88,7 @@ flowey <- read_csv("master_flowering_time_data_2019_10_15.csv")
 view(flowey)
 ```
 
-###Question 1
+### Question 1
 
 As a best guess, this was a controlled experiment designed to investigate the effect of an elf3 mutation on a variety of flowering-related outcomes of sunflowers in sunny or shady conditions. These conditions (the dependent variables) included flowering time, the diameter of flowers (`diameter`), the direction the flowers faced in polar coordinates (`direction`), the number of leaves on plants (`leaf_num`), and the number of axial heads on plants (`ax_heads`). In order to make this a controlled experiment, wild-type sunflowers (in either the shade or sun, shown in `condition`) would be the control group, and sunflowers with elf3 mutations would be the experimental group; therefore, the independent variable is genotype, shown in `genotype`. Depending on how the data is analyzed, sunlight condition (`condition`) or group (`group`) or position in the field (described in `end?` and `row`) might also be considered independent variables. To conduct the experiment, flowers were likely planted in 4 different rows (designated A-D); some of each row was then covered with shade. Support for this is seen in 
 
@@ -166,7 +166,7 @@ Now we should actually answer the questions. Are any variables redundant or rela
 
 As far as I can tell, no other variables are redundant or related. 
 
-###Question 2
+### Question 2
 
 For the most part, R parses the data as we would want and most data entries are internally consistent. A few problems, though: 
 
@@ -176,7 +176,7 @@ For the most part, R parses the data as we would want and most data entries are 
 * We might also want to pull out any observations that contain entries in the `notes` variable. It seems like a lot of these notes indicate plants that should be discarded. 
 * Some observations have `NA` entries for some data related to flowering time (`germ`, `yellow`, `flowering`, and `final`). Depending on what we need to calculate, we might decide to either exclude or include these entries; for example, if we are only interested in understanding the time it takes for each plant to flower, we might include plants with missing values in `yellow`. 
 
-###Question 3
+### Question 3
 
 Suggestions for calculations:
 
