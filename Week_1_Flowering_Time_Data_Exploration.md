@@ -17,17 +17,6 @@ library(tidyverse)
 ```
 
 ```
-## -- Attaching packages --------------------------------------------------------------------------------------------------------------------------- tidyverse 1.2.1 --
-```
-
-```
-## v ggplot2 3.2.0     v purrr   0.3.0
-## v tibble  2.1.1     v dplyr   0.8.1
-## v tidyr   0.8.3     v stringr 1.3.1
-## v readr   1.3.1     v forcats 0.4.0
-```
-
-```
 ## Warning: package 'ggplot2' was built under R version 3.5.3
 ```
 
@@ -51,40 +40,8 @@ library(tidyverse)
 ## Warning: package 'forcats' was built under R version 3.5.3
 ```
 
-```
-## -- Conflicts ------------------------------------------------------------------------------------------------------------------------------ tidyverse_conflicts() --
-## x dplyr::filter() masks stats::filter()
-## x dplyr::lag()    masks stats::lag()
-```
-
 ```r
 flowey <- read_csv("master_flowering_time_data_2019_10_15.csv")
-```
-
-```
-## Parsed with column specification:
-## cols(
-##   DNA_ID = col_character(),
-##   field_ID = col_character(),
-##   genotype = col_character(),
-##   group = col_character(),
-##   row = col_character(),
-##   `end?` = col_character(),
-##   condition = col_character(),
-##   germ = col_character(),
-##   yellow = col_character(),
-##   flowering = col_character(),
-##   final = col_character(),
-##   diameter = col_double(),
-##   direction = col_character(),
-##   height = col_double(),
-##   leaf_num = col_double(),
-##   ax_heads = col_double(),
-##   notes = col_character()
-## )
-```
-
-```r
 view(flowey)
 ```
 
@@ -183,4 +140,8 @@ Suggestions for calculations:
 1. Calculate time from germination to flowering or `final` for each plant. This would involve either parsing `germ`, `yellow`, `flowering`, and `final` as `dtt` data types and/or converting them to numerical values. 
 2. I already did this above, but separating plant `field_ID` into separate components and extracting the relevant `ID` value, parsing it as a `int` vector, is a useful skill that I had to use numerous times while workiing at Bio-Rad. 
 
+### Notes from Meetings: 
 
+* Experimental understanding was basically correct. 
+* Note that the different groups (A-D) were planted on different weeks. 
+* Next week: look at difference in flowering time. Looks like the best way to do this involves parsing the columns as `dtt` and using `difftime`?
