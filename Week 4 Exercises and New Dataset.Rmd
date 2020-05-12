@@ -1,0 +1,242 @@
+---
+title: "Week 4 Exercises"
+author: "Mitchell"
+date: "May 11, 2020"
+output: 
+  html_document: 
+    keep_md: yes
+---
+## Video Exercises
+
+First, work through video exercises. Load up libraries:
+```{r}
+library(tidyverse)
+```
+
+### One-Sample Confidence Interval and t-test
+Appropriate for examining a single independent variable. 
+
+Import dataset: 
+```{r}
+LungCapData <- read_tsv("LungCapData.txt")
+
+summary(LungCapData)
+head(LungCapData)
+LungCapData$Caesarean <- parse_factor(LungCapData$Caesarean)
+summary(LungCapData)
+```
+
+Access documentation for dataset and quickly visualize: 
+```{r}
+?t.test()
+
+ggplot(LungCapData, aes(y = LungCap)) +
+  geom_boxplot()
+```
+
+Goals for our t-test: We would like to use `t.test()` to determine whether the mean for lung capacity is less than 8. Secondarily, we would like to obtain a one-sided 95% confidence interval for the mean. Recall that, statistically, these goals are practically the same. As a consequence, `t.test()` can tell us both of these pieces of information. 
+```{r}
+t.test(LungCapData$LungCap, mu = 8, alternative = "less", conf.level = 0.95)
+```
+
+We could convert this into a two-sided t-test and get a complete 95% confidence interval by changing the argument `alternative`. (This is also the default argument in R). 
+```{r}
+t.test(LungCapData$LungCap, mu = 8, alternative = "two.sided", conf.level = 0.95)
+```
+
+Next: 99% CI and store in a variable. 
+```{r}
+TEST <- t.test(LungCapData$LungCap, mu = 8, conf.level = 0.99)
+```
+
+Recall that we can examine the attributes of this object and extract them as follows: 
+```{r}
+attributes(TEST)
+
+TEST$p.value
+```
+
+
+
+### Two-Sample t-test (Independent groups)
+
+Appropriate for examining the difference in means for two independent populations. Examines relationship between categorical and numerical variable. 
+Load data into R: 
+```{r}
+LungCapData <- read_tsv("LungCapData.txt")
+LungCapData$Caesarean <- parse_factor(LungCapData$Caesarean)
+summary(LungCapData)
+```
+
+We could also conduct two-sample t-tests using `t.test()`. In this case, we want to examine the difference in mean lung capacity between smokers and nonsmokers. Let's quickly take a look at the `t.test()` documentation and the data: 
+```{r}
+?t.test()
+
+ggplot(LungCapData, aes(x = Smoke, y = LungCap)) + 
+  geom_boxplot()
+```
+
+In this case, our null is that lung capacities are the same between the two groups. We will start by performing a two-sample test and assume non-equal variances (?). In this case, also note `mu = 0` (i.e. difference in means is 0). 
+```{r}
+t.test(LungCapData$LungCap ~ LungCapData$Smoke, mu = 0 , alternative = "two.sided", conf = 0.95, var.equal = FALSE)
+```
+
+Changing argument parameters would have the following effect on our t-test: 
+* `mu`: Test for difference other than 0 
+* `alt`: Perform one- or two-sided test
+* `conf`:  Change confidence 
+* `var.equal`: Assume equal variances, or not 
+* `paired`: Perform paired sample t-test, or not
+
+We could also specify which groups we wish to compare. Example: 
+```{r}
+t.test(LungCapData$LungCap[LungCapData$Smoke == "no"], LungCapData$LungCap[LungCapData$Smoke == "yes"], mu = 0 , alternative = "two.sided", conf = 0.95, var.equal = FALSE)
+```
+
+Another example: assume equal variances: 
+```{r}
+t.test(LungCapData$LungCap ~ LungCapData$Smoke, mu = 0 , alternative = "two.sided", conf = 0.95, var.equal = TRUE)
+```
+
+How should we decide to assume equal or not equal variances? One way is to examine the boxplot we made earlier. This boxplot shows that variance in lung capacity is likely greater among nonsmokers than among smokers, so we might not assume equal variances on that basis. We might also use `var()`. 
+```{r}
+var(LungCapData$LungCap[LungCapData$Smoke == "no"])
+var(LungCapData$LungCap[LungCapData$Smoke == "yes"])
+```
+
+Clearly, variances are not equal. A third method would be to use Levene's Test. This test is appropriate for determining whether the variances of two populations are equal. It tests the null hypothesis that the two populations have equal variance. It is contained within the `car` package. 
+```{r}
+library(car)
+```
+
+Now, we can run our Levene's test: 
+```{r}
+?leveneTest()
+attach(LungCapData)
+
+leveneTest(LungCap ~ Smoke)
+```
+
+In this case, we want to *accept* the null. Rejecting it, as in this case, indicates that population variances are not equal. 
+
+## Dull 560 Exploration 
+
+Next, let's work with my Dull560 luciferase assay dataset. Let's load in the data and make sure that everything is peachy: 
+```{r}
+library(tidyverse) 
+```
+```{r}
+Luc_data <- read_csv("Dull 560_All_Results.csv")
+#DO NOT USE SUMMARY. GO WITH `head` INSTEAD. 
+head(Luc_data)
+#We could parse some of the data a bit better. 
+Luc_data$Genotype <- parse_factor(Luc_data$Genotype)
+head(Luc_data)
+```
+
+We kind of need to fix genotype names. 
+```{r}
+summary(Luc_data$Genotype)
+
+names <- tribble( 
+  ~Genotype,  ~true_genotype,
+    "col",         "wt", 
+    "8x T2 95.01",  "95.01", 
+    "8x T2 97.30",  "97.30", 
+    "8x T2 96.14",  "96.14"
+  )
+
+Luc_data_compact <- Luc_data %>%
+  left_join(names, by = "Genotype") %>%
+  select(Region:RAE, true_genotype)
+Luc_data_compact$Genotype <- parse_factor(Luc_data_compact$Genotype)
+Luc_data_compact$true_genotype <- parse_factor(Luc_data_compact$true_genotype)
+
+Luc_data2 <- Luc_data%>%
+  left_join(names, by = "Genotype")
+Luc_data2$Genotype <- parse_factor(Luc_data2$Genotype)
+Luc_data2$true_genotype <- parse_factor(Luc_data2$true_genotype)
+
+head(Luc_data_compact)
+summary(Luc_data_compact)
+
+#Let's take the chance to also set the colors we want. 
+colors <- c("wt" = "#D55E00", 
+            "95.01" = "#0072B2", 
+            "97.30" = "#CC79A7", 
+            "96.14" = "#009E73")
+```
+
+To complete the "extra challenge", we need to determine the average period for plants with RAE < 0.6. 
+```{r}
+averages <- Luc_data_compact %>%
+  filter(RAE < 0.6) %>%
+  group_by(true_genotype) %>%
+  summarise_each(funs = mean) %>%
+  select(true_genotype, Period) 
+
+averages
+```
+
+Now, we can do a neat little trick I snatched off the internet. 
+```{r}
+average_text <- tibble(
+  true_genotype = averages$true_genotype, 
+  label = c("Avg. period, RAE <0.6:\n25.57", "Avg. period, RAE<0.6:\n26.87", "Avg. period, RAE<0.6:\n30.15"),
+  x = c(18, 18, 18), 
+  y = c(0.35, 0.35, 0.35)
+)
+```
+
+Nice! We should have everything we need now. Next, we need a graph of period and RAE: 
+```{r}
+Luc_data_compact %>%
+  ggplot(aes(Period, RAE, color = true_genotype)) + 
+  geom_point() + 
+  labs(title = "Period (hours) vs. RAE for wild-type\ncontrols and T2 families in Dull 560", 
+       x = "period (hours)", 
+       y = "RAE", 
+       color = "Genotype") +
+  scale_color_manual(values = colors) + 
+  scale_y_continuous(breaks = seq(from = 0.2, to = 1.0, by = 0.2), minor_breaks = seq(from = 0.2, to = 1.0, by = 0.2)) + 
+  scale_x_continuous(breaks = seq(from = 14, to = 36, by = 2), minor_breaks = seq(from = 14, to = 36, by = 2)) +
+  geom_hline(yintercept = 0.6, linetype = "dashed", color = "black") + 
+  theme_bw() +
+  coord_cartesian(xlim = c(14, 36), ylim = c(0.2, 1.0)) +
+  theme(plot.title = element_text(hjust = 0.5), 
+        axis.title.x = element_text(size = 13), 
+        axis.title.y = element_text(size = 13), 
+        axis.text.x = element_text(size = 9.5),
+        axis.text.y = element_text(size = 9.5)
+        ) + 
+  facet_wrap(~true_genotype , nrow = 4, ncol = 1, strip.position = "right") +
+  geom_text(data = average_text, mapping = aes(x = x, y = y, label = label), color = "black", size = 3) + 
+  geom_vline(data = averages, mapping = aes(xintercept = Period), color = "black", linetype = "dashed")
+```
+
+Let's go, too easy. 
+
+Now, to plot luminescence vs. time for a particular plant or genotype. 
+
+Particular plant: Isolate data from plant, then group ZT times into a new column, `time`, and keep the luminescence values in a new column, `lum`. Then plot. Example, with plant 73: 
+```{r}
+Plant73 <- Luc_data2 %>%
+  filter(Region == 73) %>%
+  select(Region, '36':'176') %>%
+  pivot_longer(cols = '36':'176', names_to = "time", values_to = "lum") 
+
+head(Plant73)
+```
+
+Particular genotype: to do the same thing with genotype, we would need to group plants by genotype and summarize luminescence values instead of isolating data from a particular plant. All other steps should remain the same. 
+```{r}
+Lum_vs_time <- Luc_data2 %>%
+  select(true_genotype, '36':'176') %>%
+  group_by(true_genotype) %>%
+  summarize_each(funs = mean) %>%
+  pivot_longer(cols = '36':'176', names_to = "time", values_to = "lum")
+Lum_vs_time$time <- parse_integer(Lum_vs_time$time)
+
+head(Lum_vs_time)
+Lum_vs_time
+```
