@@ -1,0 +1,273 @@
+---
+title: "Week 5 Exercises"
+author: "Mitchell"
+date: "May 18, 2020"
+output: 
+  html_document: 
+    keep_md: yes
+---
+## R4DS Exercises
+
+### Chapter 19 Exercises/Notes
+Three things needed to develop a function in R: 
+1. The function *name*
+2. The function *inputs*
+3. The function *code* (typically developed outside the function itself). 
+
+19.2.1 #3. Turn the following code into functions: 
+```{}
+a. mean(is.na(x))
+
+b. x / sum(x, na.rm = TRUE)
+
+c. sd(x, na.rm = TRUE) / mean(x, na.rm = TRUE)
+```
+
+Let's make some test datasets first: 
+```{r}
+test <- c(1, 3, 4, 5, 6)
+
+test_na <- c(1,3, NA, 4, 5, 6)
+```
+
+Next, let's try a:
+```{r}
+is.na(test)
+mean(is.na(test))
+mean(is.na(test_na))
+#Clearly, this describes the proportion of the dataset that is missing. 
+percent_missing <- function(x) {
+  mean(is.na(x))
+}
+#Next, let's test it out: 
+percent_missing(test)
+percent_missing(test_na)
+```
+
+Moving on to b: 
+```{r}
+#I'm not exactly sure what's being calculated here. 
+test/sum(test, na.rm = TRUE)
+val_proportion <- function(x) {
+  x / sum(x, na.rm = TRUE)
+}
+val_proportion(test)
+```
+
+Moving on to c: 
+```{r}
+#OK, this is clearly a calculation of the dataset's standard error of the mean. 
+sd(test, na.rm = TRUE) / mean(test, na.rm = TRUE) 
+sem <- function(x) {
+  sd(x, na.rm = TRUE) / mean(x, na.rm = TRUE) 
+}
+sem(test)
+```
+No problemo. 
+
+19.4.4 #3
+Implement a `fizzbuzz` function. It takes a single number as input. If the number is divisible by three, it returns “fizz”. If it’s divisible by five it returns “buzz”. If it’s divisible by three and five, it returns “fizzbuzz”. Otherwise, it returns the number. Make sure you first write working code before you create the function.
+```{r}
+#I designed the framework for this code on scratch paper, so I'll keep it brief here and just show the final result. 
+#Wow. This is complete bullshit. R actually doesn't have a function to check integers. Now I have to write one myself. 
+integer_check <- function(x) {
+  rounded <- round(x, digits = 0)
+  difference <- rounded - x
+  identical(difference, 0)
+}
+
+
+fizzbuzz <- function(x) {
+  three_five_check <- x/15
+  three_check <- x/3
+  five_check <- x/5
+  if (integer_check(three_five_check)){
+    print("fizzbuzz", quote = FALSE)
+} else if (integer_check(three_check)){
+    print("fizz", quote = FALSE)
+} else if (integer_check(five_check)){
+    print("buzz", quote = FALSE)
+} else {
+  print(x)
+}
+}
+```
+
+Let's try it out. 
+```{r}
+fizzbuzz(15)
+fizzbuzz(20)
+fizzbuzz(8)
+fizzbuzz(150)
+fizzbuzz(9)
+fizzbuzz(3)
+fizzbuzz(5)
+fizzbuzz(25)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+### Chapter 21 Exercises/Notes 
+```{r}
+library(tidyverse)
+```
+
+#### 21.2.1 #1
+First: Compute the mean of every column in `mtcars`. 
+```{r}
+mtcars_means <- vector("double", ncol(mtcars)) 
+for (i in seq_along(mtcars)) {
+  mtcars_means[[i]] <- mean(mtcars[[i]])
+}
+
+#Now, to check: 
+head(mtcars)
+mean(mtcars$drat) #should be the 5th value in `mtcars_means`
+mtcars_means
+#Looks like it works. 
+```
+
+Next: Compute the number of unique values in each column of `iris`. 
+```{r}
+iris_unique <- vector("integer", ncol(iris)) 
+for (i in seq_along(iris)) {
+  iris_unique[[i]] <- iris[[i]] %>%
+    table() %>%
+    length()
+}
+#OK, that might have failed but let's try it anyways. 
+iris_unique
+head(iris)
+length(table(iris$Sepal.Length))
+length(table(iris$Species))
+#WOW it actually worked 
+```
+
+Neat! Clearly, piping works within the for loop. 
+
+#### 21.3.5 #3
+Goal: Design a function that gives the mean of each numeric column in a data frame. Following the book's example, we can call it `show_mean`. Let's test out how we might get this function to work using `iris` and `LungCapData`. 
+```{r}
+lungs <- read_tsv("LungCapData.txt")
+```
+
+```{r}
+show_mean <- function(x) {
+  results <- vector("list", ncol(x))
+  names(results) <- names(x)
+  for (i in seq_along(x)) {
+    if (class(x[[i]]) == "numeric") {
+      results[[i]] <- mean(x[[i]])
+}   else { 
+  results[[i]] <- NA
+}
+}
+results
+}
+```
+
+```{r}
+#Now, let's try it out: 
+show_mean(iris)
+show_mean(lungs)
+```
+ALright, I can't get this to work so I'm moving on. It's functional, but barely. 
+
+
+#### 21.5.3 #1
+As before, do #1 and #3 from this list. 
+First, compute the mean of every column from `mtcars`. 
+```{r}
+mtcars %>%
+  map_dbl(mean)
+```
+
+Wow, that looks a lot cleaner. 
+
+Next, compute the number of unique values in each column of iris. 
+```{r}
+iris %>%
+  map(table) %>%
+  map_dbl(length)
+```
+
+Again, a whole lot cleaner. 
+
+## MarinStatsLectures
+### Mann Whitney U Test 
+Test is appropriate for examining difference in medians for two independent populations. 
+Let's import and attach the dataset: 
+```{r}
+lungs <- read_tsv("LungCapData.txt")
+attach(lungs)
+```
+
+Assess relationship between smoking and lung capacity. Use `wilcox.test()` to conduct the test. First, boxplot to look at the data: 
+```{r}
+ggplot(lungs, aes(Smoke, LungCap)) + 
+  geom_boxplot()
+```
+
+In this case: 
+H0: Median lung capacity of smokers = that of nonsmokers
+All below are default values, except `conf.int`. 
+```{r}
+wilcox.test(LungCap ~ Smoke, mu = 0, alt = "two.sided", conf.int = TRUE, conf.level = 0.95, paired = FALSE, exact = TRUE, correct = TRUE)
+```
+
+If we don't want to have exact p-values and confidence intervals calculated, we could change `exact`. 
+
+### Bootstrap Hypothesis Testing 
+Basically an alternative to the two-sample t-test. Let's load in the dataset and take a quick look at it: 
+```{r}
+chicks <- read_csv("ChickData.csv")
+head(chicks)
+ggplot(chicks, aes(feed, weight)) + 
+  geom_boxplot()
+```
+
+There is some evidence that meal type does determine weight differences. 
+We'll need to calculate some test statistics. First, let's calculate the difference in sample mean weights between the two feed types: 
+```{r}
+means <- chicks %>%
+  group_by(feed) %>%
+  summarise_each(funs = mean)
+means
+```
