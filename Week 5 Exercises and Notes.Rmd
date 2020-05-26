@@ -231,6 +231,11 @@ iris %>%
 Again, a whole lot cleaner. 
 
 ## MarinStatsLectures
+
+```{r}
+library(tidyverse)
+```
+
 ### Mann Whitney U Test 
 Test is appropriate for examining difference in medians for two independent populations. 
 Let's import and attach the dataset: 
@@ -254,8 +259,8 @@ wilcox.test(LungCap ~ Smoke, mu = 0, alt = "two.sided", conf.int = TRUE, conf.le
 
 If we don't want to have exact p-values and confidence intervals calculated, we could change `exact`. 
 
-### Bootstrap Hypothesis Testing 
-Basically an alternative to the two-sample t-test. Let's load in the dataset and take a quick look at it: 
+### Bootstrap Hypothesis Testing and Confidence Interval
+Hypothesis testing is basically an alternative to the two-sample t-test. Let's load in the dataset and take a quick look at it: 
 ```{r}
 chicks <- read_csv("ChickData.csv")
 head(chicks)
@@ -264,10 +269,158 @@ ggplot(chicks, aes(feed, weight)) +
 ```
 
 There is some evidence that meal type does determine weight differences. 
-We'll need to calculate some test statistics. First, let's calculate the difference in sample mean weights between the two feed types: 
+We'll need to calculate some test statistics. First, let's calculate the absolute difference in sample means between the two feed types: 
 ```{r}
 means <- chicks %>%
   group_by(feed) %>%
   summarise_each(funs = mean)
 means
+#Now find the difference between them: 
+test.stat1 <- abs( means[1, 2] - means[2, 2])
+test.stat1
 ```
+
+Next, calculate second test statistic, absolute difference in sample medians between the two feed types: 
+```{r}
+medians <- chicks %>%
+  group_by(feed) %>%
+  summarise_each(funs = median)
+medians
+#Now find the difference between them: 
+test.stat2 <- abs( medians[1, 2] - medians[2, 2])
+test.stat2
+```
+
+Next, we need to generate our bootstrap. We would like to bootstrap 10000 times, and we have 23 observations for weight in our dataset. We also need to set our seed for this exercise to ensure it is reproducible. Finally, our variable of interest is weight. 
+```{r}
+set.seed(112358)
+```
+
+```{r}
+n <- length(chicks$feed)
+B <- 10000
+variable <- (chicks$weight)
+```
+
+Finally, we bootstrap by sampling our variable `B` times. We resample with replacement. Essentially, we are using our column for `weight` to generate `B` bootstrap resampling. 
+```{r}
+BootstrapSamples <- matrix(sample(variable, size = n*B, replace = TRUE), nrow = n, ncol = B)
+
+#Look at dimensions to make sure everything went fine
+dim(BootstrapSamples)
+```
+
+Next, we need to calculate test statistic 1 and 2 for each column the dataset. Note that we have to calculate these in the same way we did with our original dataframe (i.e. we took mean/median of 12 and 11 observations, then calculated the absolute difference between them). We can arbitrarily choose which weight values belong to each category. Let's try to make it more efficient with some functions: 
+```{r}
+boot_median <- function(x, i) {
+  abs( median(x[1:12, i]) - median(x[13:23, i]))
+}
+
+boot_mean <- function(x, i) {
+  abs( mean(x[1:12, i]) - mean(x[13:23, i]))
+}
+```
+
+Next, let's use a for loop to calculate the test statistics for each bootstrap resample: 
+```{r}
+Boot.test.stat1 <- vector("double", B)
+Boot.test.stat2 <- vector("double", B)
+```
+
+```{r}
+for (i in 1:B) {  #For some reason, using seq_along here doesn't work. 
+  Boot.test.stat1[i] <- boot_mean(BootstrapSamples, i)
+  Boot.test.stat2[i] <- boot_median(BootstrapSamples, i)
+}
+```
+
+Check first few observations: 
+```{r}
+Boot.test.stat1[1:10]
+Boot.test.stat2[1:10]
+```
+
+**In this case, p-value is the proportion of bootstrap test statistics greater than or equal (more extreme than) our actual test statistic.** We can query this of our bootstrap test statistic using the following: 
+```{r}
+#first, we need to return our test statistics back to a vector, as it is currently stored in a tibble. 
+
+test.stat1 <- test.stat1[1,1]
+test.stat2 <- test.stat2[1,1]
+
+mean( Boot.test.stat1 >= test.stat1)
+
+mean( Boot.test.stat2 >= test.stat2)
+```
+
+These two numbers are our p-values. They may or may not be scientifically significant, depending on our actual experiment. They are not statistically significant, although we do have very low sample sizes. 
+
+Next, let's look at using bootstrapping to build a confidence interval. This allows us to compare a numeric variable for two different groups. 
+The dataset should already be loaded into R, it's called `chicks`. 
+```{r}
+chicks
+```
+
+We already briefly explored this data in the previous exercise. Our goal for this exercise is to build confidence intervals for the difference in mean and median weight gain for the two feed types. 
+Means and medians already calculated: 
+```{r}
+means
+medians
+```
+
+To calculate differences and make our confidence interval, we'll do casein vs meatmeal. 
+```{r}
+Obs.Diff.In.Means <- pull(means, weight)
+Obs.Diff.In.Means <- Obs.Diff.In.Means[1] - Obs.Diff.In.Means[2] 
+
+Obs.Diff.In.Medians <- pull(medians, weight)
+Obs.Diff.In.Medians <- Obs.Diff.In.Medians[1] - Obs.Diff.In.Medians[2]
+
+Obs.Diff.In.Means
+Obs.Diff.In.Medians
+```
+
+How can we bootstrap to build a confidence interval for these estimates? 
+Make sure to set seed first: 
+```{r}
+set.seed(13579)
+```
+
+Unlike our previous confidence interval, we set `n`, the number of observations, for each group individually. `n.c` is for casein, `n.m` is for meatmeal. As before, we want 10000 bootstrap resamples. However, we are going to sample from the casein and meatmeal data separately. 
+```{r}
+n.c <- 12
+n.m <- 11
+B <- 10000
+
+chicks_casein <- chicks %>%
+  filter(feed == "casein")
+
+chicks_meatmeal <- chicks %>%
+  filter(feed == "meatmeal")
+```
+
+Now, sample: 
+```{r}
+Boot.casein <- matrix( sample(chicks_casein$weight, size = B*n.c, 
+                      replace = TRUE), ncol = B, nrow = n.c)
+Boot.meatmeal <- matrix( sample(chicks_meatmeal$weight, size = B*n.m, 
+                                replace = TRUE), ncol = B, nrow = n.m)
+
+dim(Boot.casein) ; dim(Boot.meatmeal)
+Boot.casein[1:10] ; Boot.meatmeal[1:10]
+```
+
+Looks good. Now, we need to calculate the difference between each column in our casein vs meatmeal sample. We could do that using a for loop: 
+```{r}
+Boot.Diff.In.Means <- colMeans(Boot.casein) - colMeans(Boot.meatmeal)
+length(Boot.Diff.In.Means)
+Boot.Diff.In.Means[1:10]
+```
+Now we need difference in median of each column. We can do that with for loop: 
+```{r}
+Boot.casein.medians <- rep(0,B)
+for(i in 1:B) {
+  Boot.casein.medians[[i]] <- median(Boot.casein[[i]])
+}
+Boot.casein.medians[1:10]
+```
+

@@ -1,0 +1,111 @@
+---
+title: "Week 6 Exercises and Notes"
+author: "Mitchell"
+date: "May 25, 2020"
+output: 
+  html_document: 
+    keep_md: yes
+---
+
+### Dull 560 Luc Data
+Next, let's work with my Dull560 luciferase assay dataset. Let's load in the data and make sure that everything is peachy. We just need to copy-paste what we had from Week 4. 
+```{r}
+library(tidyverse) 
+```
+```{r}
+Luc_data <- read_csv("Dull 560_All_Results.csv")
+#We could parse some of the data a bit better. 
+Luc_data$Genotype <- parse_factor(Luc_data$Genotype)
+
+summary(Luc_data$Genotype)
+
+names <- tribble( 
+  ~Genotype,  ~true_genotype,
+    "col",         "wt", 
+    "8x T2 95.01",  "95.01", 
+    "8x T2 97.30",  "97.30", 
+    "8x T2 96.14",  "96.14"
+  )
+
+Luc_data_compact <- Luc_data %>%
+  left_join(names, by = "Genotype") %>%
+  select(Region:RAE, true_genotype)
+Luc_data_compact$Genotype <- parse_factor(Luc_data_compact$Genotype)
+Luc_data_compact$true_genotype <- parse_factor(Luc_data_compact$true_genotype)
+
+Luc_data2 <- Luc_data %>%
+  left_join(names, by = "Genotype") %>%
+  select(Region:RAE, true_genotype, '36':'176')
+Luc_data2$Genotype <- parse_factor(Luc_data2$Genotype)
+Luc_data2$true_genotype <- parse_factor(Luc_data2$true_genotype)
+
+head(Luc_data2)
+summary(Luc_data2)
+
+#Let's take the chance to also set the colors we want. 
+colors <- c("wt" = "#D55E00", 
+            "95.01" = "#0072B2", 
+            "97.30" = "#CC79A7", 
+            "96.14" = "#009E73")
+```
+
+Now, let's make a function that does what we want. What we need to accomplish: 
+Input is a data frame (for a particular genotype)
+1. Compute the mean luminescence at each ZT time, save in new df 
+2. Compute the standard deviation of each ZT time, save in new df
+3. Rearrange each df using `pivot_longer`
+4. Paste the data frames together
+```{r}
+luminescence_graph <- function(x, genotype = "genotype") {
+  
+genotype <- genotype #Don't know why, this somehow makes the whole thing work better. 
+
+interim <- x %>%
+  filter(true_genotype == (!! genotype)) %>%
+  select('36':'176')                     #Filter our supplied dataset according to the genotype we specify, remove useless columnes 
+
+times <- seq(from = 36, to = 176, by = 2)
+times <- tibble(times)                  #Create a dataset with the appropriate times for later. 
+
+stdev_interim <- interim %>%
+  map_dbl(sd) 
+sd_output <- tibble(stdev_interim) %>%
+  bind_cols(times, .)                  #Calculate SD of luminescence for each ZT time, bind times:  
+
+means_interim <- interim %>%
+  map_dbl(mean)
+final_output <- tibble(means_interim) %>%
+  bind_cols(times, .) %>%             #Calculate means of luminescence for each ZT time, bind times:  
+  left_join(sd_output, by = "times") %>%
+  rename(ZT = times, lum = means_interim, lum_sd = stdev_interim ) %>% #Join means and sd together, rename columns. 
+  mutate(lum_se = lum_sd/lum, 
+         lum_scaled = (lum-min(lum))/(max(lum)-min(lum)))
+print(final_output)
+
+ggplot(final_output, aes(ZT, lum_scaled)) +
+  geom_point(size = 2.5, color = "#0072B2") +
+  theme_bw() + 
+  theme(plot.title = element_text(hjust = 0.5)) + 
+  labs(x = "ZT time (hours)",
+       y = "Scaled luminescence values") +
+  geom_errorbar(aes(ymin = lum_scaled - lum_se, ymax = lum_scaled + lum_se), color = "#0072B2") +
+  coord_cartesian(xlim = c(36, 176), ylim = c(-0.5, 1.5)) + 
+  scale_y_continuous(breaks = seq(from = -0.5, to = 1.5, by = 0.2)) + 
+  scale_x_continuous(breaks = seq(from = 36, to = 176, by = 20))
+  
+}
+```
+
+OK, let's try it out: 
+```{r}
+luminescence_graph(Luc_data2, genotype = "wt") + labs(title = "Scaled luminescence vs ZT for WT plants")
+
+luminescence_graph(Luc_data2, genotype = "95.01") + labs(title = "Scaled Luminescence vs ZT for 95.01")
+
+luminescence_graph(Luc_data2, genotype = "97.30") + labs(title = "Scaled Luminescence vs ZT for 97.30")
+
+luminescence_graph(Luc_data2, genotype = "96.13") + labs(title = "Scaled Luminescence vs ZT for 96.13")
+```
+
+
+
