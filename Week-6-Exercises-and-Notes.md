@@ -19,7 +19,7 @@ library(tidyverse)
 ```
 
 ```
-## -- Attaching packages --------------------------------------------------------------------------------------------------------------------------- tidyverse 1.3.0 --
+## -- Attaching packages ------------------- tidyverse 1.3.0 --
 ```
 
 ```
@@ -62,7 +62,7 @@ library(tidyverse)
 ```
 
 ```
-## -- Conflicts ------------------------------------------------------------------------------------------------------------------------------ tidyverse_conflicts() --
+## -- Conflicts ---------------------- tidyverse_conflicts() --
 ## x dplyr::filter() masks stats::filter()
 ## x dplyr::lag()    masks stats::lag()
 ```
@@ -475,3 +475,227 @@ luminescence_graph(Luc_data2, genotype = "96.13") + labs(title = "Scaled Lumines
 
 
 
+
+### Stats Videos
+#### ANOVA in R
+One-way ANOVA and Kruskal-Wallis tests in R. Appropriate for comparing means of 2 or more independent populations. Let's load in the dataset and attach it. Explore relationship between weight loss and diet type.  
+
+```r
+DietData <- read_csv("DietWeightLoss.csv")
+```
+
+```
+## Parsed with column specification:
+## cols(
+##   WeightLoss = col_double(),
+##   Diet = col_character()
+## )
+```
+
+```r
+attach(DietData)
+ggplot(DietData, aes(Diet, WeightLoss)) + 
+  geom_boxplot()
+```
+
+![](Week-6-Exercises-and-Notes_files/figure-html/unnamed-chunk-5-1.png)<!-- -->
+
+`aov` let's us perform ANOVA. 
+H0: Mean weight loss the same for all diets. 
+
+```r
+(ANOVA1 <- aov(WeightLoss ~ Diet))
+```
+
+```
+## Call:
+##    aov(formula = WeightLoss ~ Diet)
+## 
+## Terms:
+##                      Diet Residuals
+## Sum of Squares   97.32983 296.98667
+## Deg. of Freedom         3        56
+## 
+## Residual standard error: 2.302897
+## Estimated effects may be unbalanced
+```
+We can get a better result using `summary`. Examine and pull out stuff using `attributes`. 
+
+```r
+summary(ANOVA1)
+```
+
+```
+##             Df Sum Sq Mean Sq F value  Pr(>F)   
+## Diet         3  97.33   32.44   6.118 0.00113 **
+## Residuals   56 296.99    5.30                   
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+```
+
+```r
+attributes(ANOVA1)
+```
+
+```
+## $names
+##  [1] "coefficients"  "residuals"     "effects"       "rank"         
+##  [5] "fitted.values" "assign"        "qr"            "df.residual"  
+##  [9] "contrasts"     "xlevels"       "call"          "terms"        
+## [13] "model"        
+## 
+## $class
+## [1] "aov" "lm"
+```
+
+```r
+ANOVA1$coefficients
+```
+
+```
+## (Intercept)       DietB       DietC       DietD 
+##   9.1800000  -0.2733333   2.9333333   1.3600000
+```
+
+Conclusion: at least one of the sample means is different. But which one(s) is different? We could use the `TukeyHSD`command to investigate further. Adjusted p value is on the right. We could also plot the result using `plot`. 
+
+```r
+TukeyHSD(ANOVA1)
+```
+
+```
+##   Tukey multiple comparisons of means
+##     95% family-wise confidence level
+## 
+## Fit: aov(formula = WeightLoss ~ Diet)
+## 
+## $Diet
+##           diff        lwr       upr     p adj
+## B-A -0.2733333 -2.4999391 1.9532725 0.9880087
+## C-A  2.9333333  0.7067275 5.1599391 0.0051336
+## D-A  1.3600000 -0.8666058 3.5866058 0.3773706
+## C-B  3.2066667  0.9800609 5.4332725 0.0019015
+## D-B  1.6333333 -0.5932725 3.8599391 0.2224287
+## D-C -1.5733333 -3.7999391 0.6532725 0.2521236
+```
+
+```r
+plot(TukeyHSD(ANOVA1))
+```
+
+![](Week-6-Exercises-and-Notes_files/figure-html/unnamed-chunk-8-1.png)<!-- -->
+
+#### Chi-square Test + Fisher's Exact Test 
+Chi-square tests for independence are appropriate for testing independence between two categorical variables. Import and attach dataset: 
+
+```r
+(LungCapData <- read_tsv("LungCapData.txt"))
+```
+
+```
+## Parsed with column specification:
+## cols(
+##   LungCap = col_double(),
+##   Age = col_double(),
+##   Height = col_double(),
+##   Smoke = col_character(),
+##   Gender = col_character(),
+##   Caesarean = col_character()
+## )
+```
+
+```
+## # A tibble: 725 x 6
+##    LungCap   Age Height Smoke Gender Caesarean
+##      <dbl> <dbl>  <dbl> <chr> <chr>  <chr>    
+##  1    6.48     6   62.1 no    male   no       
+##  2   10.1     18   74.7 yes   female no       
+##  3    9.55    16   69.7 no    female yes      
+##  4   11.1     14   71   no    male   no       
+##  5    4.8      5   56.9 no    male   no       
+##  6    6.22    11   58.7 no    female no       
+##  7    4.95     8   63.3 no    male   yes      
+##  8    7.32    11   70.4 no    male   no       
+##  9    8.88    15   70.5 no    male   no       
+## 10    6.8     11   59.2 no    male   no       
+## # ... with 715 more rows
+```
+
+```r
+attach(LungCapData)
+```
+
+`chisq.test` is the command used to perform the chi-squared test. 
+Before performing the test, we need to construct a contingency table. 
+
+```r
+(TAB <- table(Gender, Smoke))
+```
+
+```
+##         Smoke
+## Gender    no yes
+##   female 314  44
+##   male   334  33
+```
+
+Next, execute the test on the contingency table. 
+
+```r
+(CHI <- chisq.test(TAB, correct = T))
+```
+
+```
+## 
+## 	Pearson's Chi-squared test with Yates' continuity correction
+## 
+## data:  TAB
+## X-squared = 1.7443, df = 1, p-value = 0.1866
+```
+
+As with other tests, we can store results in an object and extract attributes using `attributes`: 
+
+```r
+attributes(CHI)
+```
+
+```
+## $names
+## [1] "statistic" "parameter" "p.value"   "method"    "data.name" "observed" 
+## [7] "expected"  "residuals" "stdres"   
+## 
+## $class
+## [1] "htest"
+```
+
+```r
+CHI$expected 
+```
+
+```
+##         Smoke
+## Gender         no      yes
+##   female 319.9779 38.02207
+##   male   328.0221 38.97793
+```
+
+If the assumptions of the Chi-square test are not met, then we might perform a Fisher's Exact Test (a non-parametric Chi-square test). 
+Use the `fisher.test` command. 
+
+```r
+fisher.test(TAB, conf.int = T, conf.level = 0.95)
+```
+
+```
+## 
+## 	Fisher's Exact Test for Count Data
+## 
+## data:  TAB
+## p-value = 0.1845
+## alternative hypothesis: true odds ratio is not equal to 1
+## 95 percent confidence interval:
+##  0.4233701 1.1659426
+## sample estimates:
+## odds ratio 
+##  0.7054345
+```

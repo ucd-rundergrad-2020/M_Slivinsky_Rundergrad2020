@@ -109,3 +109,61 @@ luminescence_graph(Luc_data2, genotype = "96.13") + labs(title = "Scaled Lumines
 
 
 
+
+### Stats Videos
+#### ANOVA in R
+One-way ANOVA and Kruskal-Wallis tests in R. Appropriate for comparing means of 2 or more independent populations. Let's load in the dataset and attach it. Explore relationship between weight loss and diet type.  
+```{r}
+DietData <- read_csv("DietWeightLoss.csv")
+attach(DietData)
+ggplot(DietData, aes(Diet, WeightLoss)) + 
+  geom_boxplot()
+```
+
+`aov` let's us perform ANOVA. 
+H0: Mean weight loss the same for all diets. 
+```{r}
+(ANOVA1 <- aov(WeightLoss ~ Diet))
+```
+We can get a better result using `summary`. Examine and pull out stuff using `attributes`. 
+```{r}
+summary(ANOVA1)
+attributes(ANOVA1)
+ANOVA1$coefficients
+```
+
+Conclusion: at least one of the sample means is different. But which one(s) is different? We could use the `TukeyHSD`command to investigate further. Adjusted p value is on the right. We could also plot the result using `plot`. 
+```{r}
+TukeyHSD(ANOVA1)
+plot(TukeyHSD(ANOVA1))
+```
+
+#### Chi-square Test + Fisher's Exact Test 
+Chi-square tests for independence are appropriate for testing independence between two categorical variables. Import and attach dataset: 
+```{r}
+(LungCapData <- read_tsv("LungCapData.txt"))
+attach(LungCapData)
+```
+
+`chisq.test` is the command used to perform the chi-squared test. 
+Before performing the test, we need to construct a contingency table. 
+```{r}
+(TAB <- table(Gender, Smoke))
+```
+
+Next, execute the test on the contingency table. 
+```{r}
+(CHI <- chisq.test(TAB, correct = T))
+```
+
+As with other tests, we can store results in an object and extract attributes using `attributes`: 
+```{r}
+attributes(CHI)
+CHI$expected 
+```
+
+If the assumptions of the Chi-square test are not met, then we might perform a Fisher's Exact Test (a non-parametric Chi-square test). 
+Use the `fisher.test` command. 
+```{r}
+fisher.test(TAB, conf.int = T, conf.level = 0.95)
+```
