@@ -415,12 +415,34 @@ Boot.Diff.In.Means <- colMeans(Boot.casein) - colMeans(Boot.meatmeal)
 length(Boot.Diff.In.Means)
 Boot.Diff.In.Means[1:10]
 ```
-Now we need difference in median of each column. We can do that with for loop: 
+Now we need difference in median of each column. We can do that with a for loop: 
 ```{r}
 Boot.casein.medians <- rep(0,B)
 for(i in 1:B) {
   Boot.casein.medians[[i]] <- median(Boot.casein[[i]])
 }
+
+Boot.meatmeal.medians <- rep(0,B)
+for(i in 1:B) {
+  Boot.meatmeal.medians[[i]] <- median(Boot.meatmeal[[i]])
+}
 Boot.casein.medians[1:10]
+Boot.meatmeal.medians[1:10]
+
+Boot.Diff.In.Medians <- Boot.casein.medians - Boot.meatmeal.medians
+Boot.Diff.In.Medians[1:10]
+length(Boot.Diff.In.Medians)
 ```
 
+We can use many different approaches for building confidence intervals, but here we'll focus on the percentile method. The method takes the middle 95% of the bootstrap as the size of the confidence interval. 
+
+```{r}
+quantile(Boot.Diff.In.Means, prob = 0.025) #Find 2.5th percentile;
+quantile(Boot.Diff.In.Means, prob = 0.975) #Find 97.5th percentile. 
+```
+For medians: 
+```{r}
+quantile(Boot.Diff.In.Medians, prob = 0.025)
+quantile(Boot.Diff.In.Medians, prob = 0.975)
+```
+Values may be scientifically significant but it is not statistically significant. 

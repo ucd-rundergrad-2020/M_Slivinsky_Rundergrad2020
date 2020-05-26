@@ -942,12 +942,17 @@ Boot.Diff.In.Means[1:10]
 ##  [1] 65.07576 26.84848 33.44697 61.39394 40.48485 50.40152 23.72727 93.56818
 ##  [9] 85.27273 28.65909
 ```
-Now we need difference in median of each column. We can do that with for loop: 
+Now we need difference in median of each column. We can do that with a for loop: 
 
 ```r
 Boot.casein.medians <- rep(0,B)
 for(i in 1:B) {
   Boot.casein.medians[[i]] <- median(Boot.casein[[i]])
+}
+
+Boot.meatmeal.medians <- rep(0,B)
+for(i in 1:B) {
+  Boot.meatmeal.medians[[i]] <- median(Boot.meatmeal[[i]])
 }
 Boot.casein.medians[1:10]
 ```
@@ -956,3 +961,68 @@ Boot.casein.medians[1:10]
 ##  [1] 390 283 390 283 404 260 368 332 283 390
 ```
 
+```r
+Boot.meatmeal.medians[1:10]
+```
+
+```
+##  [1] 153 303 206 258 263 242 380 303 344 153
+```
+
+```r
+Boot.Diff.In.Medians <- Boot.casein.medians - Boot.meatmeal.medians
+Boot.Diff.In.Medians[1:10]
+```
+
+```
+##  [1] 237 -20 184  25 141  18 -12  29 -61 237
+```
+
+```r
+length(Boot.Diff.In.Medians)
+```
+
+```
+## [1] 10000
+```
+
+We can use many different approaches for building confidence intervals, but here we'll focus on the percentile method. The method takes the middle 95% of the bootstrap as the size of the confidence interval. 
+
+
+```r
+quantile(Boot.Diff.In.Means, prob = 0.025) #Find 2.5th percentile;
+```
+
+```
+##      2.5% 
+## -2.913068
+```
+
+```r
+quantile(Boot.Diff.In.Means, prob = 0.975) #Find 97.5th percentile. 
+```
+
+```
+##    97.5% 
+## 97.12178
+```
+For medians: 
+
+```r
+quantile(Boot.Diff.In.Medians, prob = 0.025)
+```
+
+```
+## 2.5% 
+## -122
+```
+
+```r
+quantile(Boot.Diff.In.Medians, prob = 0.975)
+```
+
+```
+## 97.5% 
+##   215
+```
+Values may be scientifically significant but it is not statistically significant. 
