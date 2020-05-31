@@ -1,0 +1,251 @@
+---
+title: "Week 7 Hypocotyl Data"
+author: "Mitchell"
+date: "May 29, 2020"
+output: 
+  html_document: 
+    keep_md: yes
+---
+
+Load libraries, then dataset: 
+```{r}
+library(tidyverse)
+```
+```{r}
+data1 <- read_csv("hypocotyl_elongation_data_rclub.csv")
+```
+
+```{r}
+summary(data1)
+```
+OK, we have some tidying and re-parsing to do. First, let's check out our NA's: 
+```{r}
+filter(data1, is.na(number) == T)
+```
+HAHAHAHA WTF? WHY is the data LIKE this 
+Stuff to do: 
+1. Remove the empty observations and column  
+2. Parse `genotype`, `treatment`, `germination_notes` as factors
+3. Remove the "poor_germination" individuals
+```{r}
+data1$genotype <- parse_factor(data1$genotype)
+data1$treatment <- parse_factor(data1$treatment)
+data1$germination_notes <- parse_factor(data1$germination_notes)
+
+data2 <- data1 %>%
+  select(!`X12`) %>%
+  filter(is.na(number) != T) %>%
+  filter(germination_notes == "good")
+
+summary(data2)
+head(data2)
+```
+OK, looks pretty clean. Now let's plot hypocotyl length. Let's make a boxplot first. We should facet by the types of light intensities. We should also get some colors going for our genotypes. 
+```{r}
+colors <- c("WT" = "#CC79A7", "elf3" = "#0072B2")
+```
+```{r}
+ggplot(data2, aes(genotype, hypocotyl_length)) + 
+  geom_boxplot(aes(fill = genotype)) + 
+  facet_wrap(~ treatment, nrow = 1) +
+  theme_bw() +
+  scale_fill_manual(values = colors) +
+  coord_cartesian(ylim = c(0, 22.5)) +
+  scale_y_continuous(breaks = seq(from = 0, to = 25, by = 5)) + 
+  labs(title = "Distribution of hypocotyl lengths (cm) for\neach genotype under each shade condition", 
+       x = "genotype", 
+       y = "hypocotyl length(cm)", 
+       color = "genotype") + 
+  theme(plot.title = element_text(hjust = 0.5), 
+        axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12.5))
+```
+OK, means now. We shoudl use our handy-dandy `RMisc`. 
+```{r}
+library(Rmisc)
+library(tidyverse)
+```
+
+```{r}
+means <- summarySE(data = data2, measurevar = "hypocotyl_length", groupvars = c("treatment", "genotype"))
+means
+```
+
+Now we can plot: 
+```{r}
+ggplot(means, aes(genotype, hypocotyl_length)) + 
+  geom_point(aes(color = genotype), size = 3) + 
+  geom_errorbar(aes(ymin = hypocotyl_length - sd, ymax = hypocotyl_length + sd, color = genotype), width = 0.5, size = 1) +
+  facet_wrap(~ treatment, nrow = 1) +
+  theme_bw() +
+  scale_color_manual(values = colors) +
+  coord_cartesian(ylim = c(0, 22.5)) +
+  scale_y_continuous(breaks = seq(from = 0, to = 25, by = 5)) + 
+  labs(title = "Mean hypocotyl lengths (cm) for\neach genotype under each shade condition", 
+       x = "genotype", 
+       y = "hypocotyl length(cm)", 
+       color = "genotype") + 
+  theme(plot.title = element_text(hjust = 0.5), 
+        axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12.5))
+```
+Are these means significantly different? I could do this with a for loop but I am too lazy. Let's just do the command. 
+```{r}
+data_FR <- data2 %>%
+  filter(treatment == "FR") %>%
+  select(genotype, hypocotyl_length)
+
+data_0.02 <- data2 %>%
+  filter(treatment == "0.02") %>%
+  select(genotype, hypocotyl_length)
+
+data_0.2 <- data2 %>%
+  filter(treatment == "0.2") %>%
+  select(genotype, hypocotyl_length)
+
+data_0.5 <- data2 %>%
+  filter(treatment == "0.5") %>%
+  select(genotype, hypocotyl_length)
+
+summary(data_FR)
+summary(data_0.02)
+summary(data_0.2)
+summary(data_0.5)
+```
+
+OK, now let's do a t-test for difference in means: 
+```{r}
+(FR_t_test <- t.test(data_FR$hypocotyl_length ~ data_FR$genotype, mu = 0,
+                    alternative = "two.sided") )
+
+('0.02_t_test' <- t.test(data_0.02$hypocotyl_length ~ data_0.02$genotype, mu = 0,
+                    alternative = "two.sided") )
+
+('0.2_t_test' <- t.test(data_0.2$hypocotyl_length ~ data_0.2$genotype, mu = 0,
+                    alternative = "two.sided") )
+
+('0.5_t_test' <- t.test(data_0.5$hypocotyl_length ~ data_0.5$genotype, mu = 0,
+                    alternative = "two.sided") )
+```
+
+Alrighty kiddos, hold on to your hats. 
+```{r}
+base <- tibble(treatment = c("0.02", "0.2", "0.5"))
+base
+
+lefties <- tibble("x" = c(1, 1, 1 ), 
+                  "xend" = c(1, 1, 1),
+                  "y" = c(5, 8, 9), 
+                  "yend" = c(12.5, 14, 16))
+centies <- tibble("x" = c(1, 1, 1), 
+                  "xend" = c(2, 2, 2), 
+                  "y" = c(12.5, 14, 16), 
+                  "yend" = c(12.5, 14, 16))
+
+righties <- tibble("x" = c(2, 2, 2), 
+                   "xend" = c(2, 2, 2), 
+                   "y" = c(12.5, 14, 16), 
+                   "yend" = c(10, 13, 15))
+
+texties <- tibble("x" = c(1.5, 1.5, 1.5),
+                  "y" = c(14.5, 16, 18), 
+                  label = c("p = 0.00", "p = 0.00", "p = 0.00"))
+
+left_line <- base %>%
+  bind_cols(lefties)
+
+center_line <- base %>%
+  bind_cols(centies)
+
+right_line <- base %>%
+  bind_cols(righties)
+
+text_coord <- base %>%
+  bind_cols(texties)
+```
+
+Now for the magic: 
+```{r}
+ggplot(means, aes(genotype, hypocotyl_length)) + 
+  geom_point(aes(color = genotype), size = 3) + 
+  geom_errorbar(aes(ymin = hypocotyl_length - sd, ymax = hypocotyl_length + sd, color = genotype), width = 0.5, size = 1) +
+  facet_wrap(~ treatment, nrow = 1) +
+  theme_bw() +
+  scale_color_manual(values = colors) +
+  coord_cartesian(ylim = c(0, 22.5)) +
+  scale_y_continuous(breaks = seq(from = 0, to = 25, by = 5)) + 
+  labs(title = "Mean hypocotyl lengths (cm) for\neach genotype under each shade condition", 
+       x = "genotype", 
+       y = "hypocotyl length(cm)", 
+       color = "genotype") + 
+  theme(plot.title = element_text(hjust = 0.5), 
+        axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12.5)) + 
+  geom_segment(data = left_line, mapping = aes(x = x, xend = xend, y = y, yend = yend), size = 1) +
+  geom_segment(data = center_line, mapping = aes(x = x, xend = xend, y = y, yend = yend), size = 1) + 
+  geom_segment(data = right_line, mapping = aes(x = x, xend = xend, y = y, yend = yend), size = 1)  +
+  geom_text(data = text_coord, mapping = aes(x = x, y = y, label = label), size = 3, color = "black")
+```
+**LETS GO**
+Interestingly, we could have also investigated this information using ANOVA. Say, for example, we were interested in finding out whether the mean hypocotyl length was the same for WT plants under all conditions. We could perform the following analysis: 
+```{r}
+WT_data2 <- filter(data2, genotype == "WT")
+summary(WT_data2$genotype)
+summary(WT_data2$treatment)
+```
+OK, let's run our ANOVA. 
+H0: Mean hypocotyl length the same for each treatment of WT plants. 
+```{r}
+ANOVA1 <- aov(WT_data2$hypocotyl_length ~ WT_data2$treatment)
+summary(ANOVA1)
+```
+
+Obviously, at least one of them is different. But which one could it be? 
+```{r}
+TukeyHSD(ANOVA1)
+```
+
+Looks like FR is the major outlier here. 
+
+OK, now let's examine the relationship between hypocotyl length and first internode length. 
+```{r}
+ggplot(data2, aes(first_internode_length, hypocotyl_length)) + 
+  geom_point()
+```
+
+Weird. Why are some of the internode lengths 0? 
+```{r}
+filter(data2, first_internode_pixels == 0)
+```
+
+OK, I don't know enough about this to know if its an error. There are only a handful of these so hopefully they won't mess up the data TOO much. 
+We would like to perform a linear regression analysis on the relationship between hypocotyl length and first internode length, so let's take it away. 
+```{r}
+hypocotyl_regression <- lm(hypocotyl_length ~ first_internode_length, data = data2)
+summary(hypocotyl_regression)
+```
+
+Hm, it looks like the relationship may not be particularly strong. We can, however, add this information to our plot: 
+```{r}
+ggplot(data2, aes(first_internode_length, hypocotyl_length)) + 
+  geom_point(aes(color = genotype, shape = treatment)) + 
+  geom_abline(aes(intercept = 13.0240, slope = -1.6336), color = "black", alpha = 0.5, linetype = "dashed", size = 1.3) + 
+  geom_text(aes(x = 6, y = 15, label = "y = -1.63x + 13.02\nR-squared = 0.3406")) + 
+  theme_bw() + 
+  labs(title = "Hypocotyl length (cm) vs internode length (cm) for all plants", 
+       x = "internode length (cm)" , 
+       y = "hypocotyl length (cm)", 
+       color = "genotype") + 
+  coord_cartesian(xlim = c(0, 7), ylim = c(0, 22.5)) + 
+  scale_x_continuous(breaks = seq(from = 0, to = 7, by = 1)) + 
+  scale_y_continuous(breaks = seq(from = 0, to = 22.5, by = 2.5)) + 
+  theme(plot.title = element_text(hjust = 0.5), 
+        axis.title = element_text(size = 14), 
+        axis.text = element_text(size = 11.5)) + 
+  scale_color_manual(values = colors)
+```
+OK, looks nice!
+
+
+
+
